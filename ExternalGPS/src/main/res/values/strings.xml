@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	Copyright (C) 2010, 2011, 2012, 2013 Herbert von Broeuschmeul
+	Copyright (C) 2010, 2011, 2012, 2013 BluetoothGPS4Droid Project
+	Copyright (C) 2011, 2012, 2013 UsbGPS4Droid Project
+	  
+	This file is part of UsbGPS4Droid.
+	
+    UsbGPS4Droid is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    UsbGPS4Droid is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with UsbGPS4Droid.  If not, see http://www.gnu.org/licenses/
+-->
+
+<resources>
+
+    <string name="app_name">External GPS</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="switch_usb_gps">USB GPS</string>
+
+    <string name="pref_start_gps_title">Start/Stop GPS</string>
+    <string name="pref_start_gps_summary_off">Usb GPS is off</string>
+    <string name="pref_start_gps_summary_on">Usb GPS is on</string>
+    <string name="pref_start_gps_params_title">GPS Options (SiRF)</string>
+    <string name="pref_usb_serial_settings">USB Serial settings</string>
+    <string name="pref_usb_serial_baudrate_title">Baudrate</string>
+    <string name="pref_usb_serial_data_bits_title">Data bits</string>
+    <string name="pref_usb_serial_parity_title">Parity</string>
+    <string name="pref_usb_serial_stop_bits_title">Stop bits</string>
+    <string name="pref_gps_location_provider_title">Location provider options</string>
+    <string name="pref_gps_location_provider_summary">Usb GPS will replace internal GPS</string>
+    <string name="pref_replace_std_gps_title">Replace internal GPS</string>
+    <string name="pref_replace_std_gps_summary_on">Usb GPS will replace internal GPS</string>
+    <string name="pref_replace_std_gps_summary_off">Usb GPS will use a new location provider</string>
+    <string name="pref_force_enable_provider_title">Auto-enable location provider</string>
+    <string name="pref_force_enable_provider_summary_on">Auto-enable the location provider, even if it has been disabled</string>
+    <string name="pref_force_enable_provider_summary_off">Auto-enable the location provider only if it doesn\'t exist yet</string>
+    <string name="pref_mock_gps_name_title">Mock location provider name</string>
+    <string name="pref_mock_gps_name_summary">Usb GPS name: %s</string>
+    <string name="pref_connection_retries_title">Connection retry number</string>
+
+    <plurals name="pref_connection_retries_summary">
+        <item quantity="other">Number of attempts before exiting: %s</item>
+    </plurals>
+
+    <string name="pref_recording_params_title">Recording parameters</string>
+    <string name="pref_recording_is_turned_off">Recording is turned OFF</string>
+    <string name="pref_recording_raw">All raw GPS data will be recorded</string>
+    <string name="pref_recording_nmea">Only NMEA sentences will be recorded</string>
+    <string name="pref_log_raw_data_title">Log raw GPS data</string>
+    <string name="pref_raw_data_log_format_title">Raw log file format</string>
+    <string name="pref_trackfile_prefix_title">Trackfiles prefix</string>
+    <string name="pref_trackfile_prefix_summary">Select the prefix for the track files</string>
+    <string name="pref_trackfile_directory_title">Trackfiles directory</string>
+    <string name="pref_trackfile_directory_summary">Select the directory for the track files</string>
+    <string name="pref_about_title">About</string>
+    <string name="pref_about_summary"></string>
+    <string name="pref_sirf_gps_title">SiRF GPS</string>
+    <string name="pref_sirf_gps_summary_on">"Use SiRF Options"</string>
+    <string name="pref_sirf_gps_summary_off">"Don't use SiRF Options"</string>
+    <string name="pref_sirf_nmea_category_title">Choice of NMEA sentences</string>
+    <string name="pref_sirf_gps_category_title">GPS operation</string>
+    <string name="pref_enable_gga_title">Enable NMEA GGA</string>
+    <string name="pref_enable_gga_summary_off">NMEA GGA sentences are off</string>
+    <string name="pref_enable_gga_summary_on">NMEA GGA sentences are on</string>
+    <string name="pref_enable_rmc_title">Enable NMEA RMC</string>
+    <string name="pref_enable_rmc_summary_off">NMEA RMC sentences are off</string>
+    <string name="pref_enable_rmc_summary_on">NMEA RMC sentences are on</string>
+    <string name="pref_enable_gll_title">Enable NMEA GLL</string>
+    <string name="pref_enable_gll_summary_off">NMEA GLL sentences are off</string>
+    <string name="pref_enable_gll_summary_on">NMEA GLL sentences are on</string>
+    <string name="pref_enable_vtg_title">Enable NMEA VTG</string>
+    <string name="pref_enable_vtg_summary_off">NMEA VTG sentences are off</string>
+    <string name="pref_enable_vtg_summary_on">NMEA VTG sentences are on</string>
+    <string name="pref_enable_gsa_title">Enable NMEA GSA</string>
+    <string name="pref_enable_gsa_summary_off">NMEA GSA sentences are off</string>
+    <string name="pref_enable_gsa_summary_on">NMEA GSA sentences are on</string>
+    <string name="pref_enable_gsv_title">Enable NMEA GSV</string>
+    <string name="pref_enable_gsv_summary_off">NMEA GSV sentences are off</string>
+    <string name="pref_enable_gsv_summary_on">NMEA GSV sentences are on</string>
+    <string name="pref_enable_zda_title">Enable NMEA ZDA</string>
+    <string name="pref_enable_zda_summary_off">NMEA ZDA sentences are off</string>
+    <string name="pref_enable_zda_summary_on">NMEA ZDA sentences are on</string>
+    <string name="pref_enable_sbas_title">SBAS (WAAS/EGNOS)</string>
+    <string name="pref_enable_sbas_summary_off">SBAS is off</string>
+    <string name="pref_enable_sbas_summary_on">SBAS is on</string>
+    <string name="pref_enable_nmea_title">NMEA/Binary mode</string>
+    <string name="pref_enable_nmea_summary_off">Binary mode is on</string>
+    <string name="pref_enable_nmea_summary_on">NMEA mode is on</string>
+    <string name="pref_enable_static_navigation_title">Static Navigation</string>
+    <string name="pref_enable_static_navigation_summary_off">Static Navigation disabled</string>
+    <string name="pref_enable_static_navigation_summary_on">Static Navigation enabled</string>
+    <string name="msg_gps_provider_disabled">GPS is disabled</string>
+    <!-- <string name="msg_bluetooth_unsupported">Bluetooth is not supported</string> -->
+    <!-- <string name="msg_bluetooth_disabled">Bluetooth is disabled</string> -->
+    <string name="msg_mock_location_disabled">Mock locations disabled</string>
+    <string name="msg_gps_unavaible">Cannot connect to USB GPS</string>
+    <string name="foreground_notification_title_gps_provider_started">UsbGps service started</string>
+    <string name="foreground_notification_text_please_plug_in_gps_receiver">Please plug in a USB GPS receiver</string>
+    <string name="foreground_notification_title_usb_gps_attached">USB GPS receiver attached</string>
+    <string name="foreground_notification_text_usb_gps_attached">USB GPS receiver attached</string>
+    <string name="foreground_notification_title_usb_gps_detached">USB GPS receiver detached</string>
+    <string name="foreground_notification_text_lost_connection">Lost connection to USB GPS receiver</string>
+    <string name="foreground_notification_title_autodetect">USB GPS Receiver identification</string>
+    <string name="foreground_notification_text_autodetect">USB GPS Receiver identification</string>
+    <string name="foreground_notification_title_autodetect_complete">USB GPS Receiver identification complete</string>
+    <string name="foreground_notification_text_autodetect_complete">USB GPS identification complete</string>
+    <string name="foreground_notification_title_running">USB GPS Receiver running</string>
+    <string name="foreground_notification_text_running">USB GPS Receiver running</string>
+    <string name="foreground_notification_text_has_known_location">Has known location</string>
+    <string name="msg_failed_to_autobaud">Failed to autobaud</string>
+    <string name="msg_usb_gps_attached">USB GPS receiver attached</string>
+    <string name="msg_lost_connection_to_usb_receiver">Lost connection to USB GPS receiver</string>
+    <string name="about_title">About</string>
+    <string name="about_version">UsbGPS4Droid version</string>
+    <string name="about_copyright_1">Copyright (C) 2010-2013 Herbert von Broeuschmeul</string>
+    <string name="about_copyright_2">Copyright (C) 2010-2013 BluetoothGPS4Droid Project</string>
+    <string name="about_copyright_3">Copyright (C) 2011-2013 UsbGPS4Droid Project</string>
+    <string name="about_app_desc">Usb GPS for Android is an application 
+    	for using an external usb GPS on Android devices.
+</string>
+    <string name="about_license">It is open source software 
+    	distributed free of charge under the terms of the <a href="http://www.gnu.org/licenses/gpl-3.0-standalone.html"><b>GNU General Public License</b></a>.
+</string>
+    <string name="about_sources">The source code is available from Git repository on the project website: 
+        https://github.com/HvB/UsbGps4Droid
+</string>
+
+    <string-array name="pref_usb_serial_baudrate_entries">
+        <item>Autodetect</item>
+        <item>4800</item>
+        <item>9600</item>
+        <item>19200</item>
+        <item>38400</item>
+        <item>57600</item>
+        <item>115200</item>
+    </string-array>
+    <string-array name="pref_usb_serial_parity_entries">
+        <item>None</item>
+        <item>Odd</item>
+        <item>Even</item>
+        <item>Mark</item>
+        <item>Space</item>
+    </string-array>
+    <string-array name="pref_raw_data_log_format_entries">
+        <item>Full raw log (.raw)</item>
+        <item>NMEA sentences only (.nmea)</item>
+    </string-array>
+
+</resources>

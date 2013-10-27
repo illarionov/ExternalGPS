@@ -1,0 +1,5 @@
+-dontobfuscate
+
+-keepclasseswithmembers class * {
+    native <methods>;
+}
