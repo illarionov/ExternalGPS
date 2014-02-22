@@ -134,6 +134,14 @@
     <string name="about_sources">The source code is available from Git repository on the project website: 
         https://github.com/HvB/UsbGps4Droid
 </string>
+    <string name="message_plug_the_usb_device">Device is not connected. \nPlug the USB GPS receiver
+        to get started.
+    </string>
+    <string name="usb_receiver_header">USB Receiver</string>
+    <string name="status_title">Status:</string>
+    <string name="usb_serial_port_driver">Serial driver</string>
+    <string name="usb_device_name">Device name</string>
+    <string name="usb_line_coding">Line Coding</string>
 
     <string-array name="pref_usb_serial_baudrate_entries">
         <item>Autodetect</item>

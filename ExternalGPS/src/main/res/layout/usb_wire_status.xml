@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:text="@string/usb_receiver_header" />
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:useDefaultMargins="true"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/status_title"
+            style="@style/titleColumn" />
+
+        <TextView
+            android:id="@+id/usb_status"
+            android:layout_gravity="fill_horizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            tools:text="Connected" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/titleColumn"
+            android:text="VID / PID" />
+
+        <TextView
+            android:id="@+id/usb_vid_pid"
+            android:layout_gravity="fill_horizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            tools:text="067b / 2303" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/titleColumn"
+            android:text="@string/usb_serial_port_driver" />
+
+        <TextView
+            android:id="@+id/usb_serial_port_driver"
+            android:layout_gravity="fill_horizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            tools:text="PL2303" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/titleColumn"
+            android:text="@string/usb_device_name" />
+
+        <TextView
+            android:id="@+id/usb_device_name"
+            android:layout_gravity="fill_horizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            tools:text="-" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/titleColumn"
+            android:text="@string/usb_line_coding" />
+
+        <TextView
+            android:id="@+id/usb_line_coding"
+            android:layout_gravity="fill_horizontal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            tools:text="38400 8-N-1" />
+
+    </GridLayout>
+
+
+</LinearLayout>

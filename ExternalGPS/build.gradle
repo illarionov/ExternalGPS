@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.6.+'
+        classpath 'com.android.tools.build:gradle:0.8.+'
     }
 }
 apply plugin: 'android'
@@ -14,11 +14,18 @@ repositories {
 
 android {
     compileSdkVersion 19
-    buildToolsVersion "19.0.0"
+    buildToolsVersion "19.0.2"
 
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 19
+
+        ndk {
+            moduleName "libusbconverter"
+            cFlags "-fvisibility=hidden -W -Wall -D_POSIX_C_SOURCE=200112L"
+            ldLibs "log"
+        }
+
     }
 
     compileOptions {
@@ -34,6 +41,12 @@ android {
             proguardFile "proguard-project.txt"
         }
     }
+
+    buildTypes.debug.jniDebugBuild true
+
+    lintOptions {
+        disable 'MockLocation'
+    }
 }
 
 dependencies {
@@ -42,29 +55,4 @@ dependencies {
     compile files('libs/proguardannotations.jar')
 }
 
-/* NDK */
-task copyNativeLibs(type: Copy, dependsOn: 'buildNative') {
-    dependsOn 'buildNative'
-    from(new File('libs')) { include '**/*.so' }
-    into new File(buildDir, 'native-libs')
-}
 
-tasks.withType(Compile) { compileTask -> compileTask.dependsOn copyNativeLibs }
-
-tasks.withType(com.android.build.gradle.tasks.PackageApplication) { pkgTask ->
-    pkgTask.jniDir new File(buildDir, 'native-libs')
-}
-
-task buildNative(type: Exec) {
-    if (System.env.ANDROID_NDK_HOME != null) {
-        def ndkBuild = new File(System.env.ANDROID_NDK_HOME, 'ndk-build')
-        commandLine ndkBuild
-    } else {
-        doLast {
-            println '##################'
-            println 'Skipping NDK build'
-            println 'Reason: ANDROID_NDK_HOME not set.'
-            println '##################'
-        }
-    }
-}
