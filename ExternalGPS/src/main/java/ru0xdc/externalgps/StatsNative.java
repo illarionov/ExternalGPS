@@ -5,7 +5,7 @@ import proguard.annotation.KeepClassMemberNames;
 import proguard.annotation.KeepName;
 
 @KeepName
-class StatsNative {
+public class StatsNative {
 
     private long mStartTs;
 

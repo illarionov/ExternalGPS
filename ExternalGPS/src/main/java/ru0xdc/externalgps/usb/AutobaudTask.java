@@ -10,8 +10,7 @@ import ru0xdc.externalgps.R;
 import ru0xdc.externalgps.UsbGpsProviderService;
 
 import java.util.Arrays;
-
-import javax.annotation.concurrent.GuardedBy;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AutobaudTask extends Thread {
 
@@ -23,27 +22,35 @@ public class AutobaudTask extends Thread {
     public static final int MIN_VALID_MSG_CNT = 2;
 
     private static AutobaudTask.Callbacks sDummyCallbacks = new Callbacks() {
+
         @Override
-        public void onAutobaudCompleted(boolean isSuccessful, int baudrate) {}
+        public SerialLineConfiguration getSerialLineConfiguration() { return new SerialLineConfiguration();}
+
+        @Override
+        public void setSerialLineConfiguration(SerialLineConfiguration conf) {};
+
+        @Override
+        public void onAutobaudCompleted(int baudrate) {}
+        @Override
+        public void onAutobaudFailed() {};
     };
 
-    private final UsbSerialController mUsbController;
     private final SharedPreferences mSharedPrefs;
     private final int[] mDefaultBaudrateProbeList;
     private AutobaudTask.Callbacks mCallbacks;
 
-    @GuardedBy("this")
-    private volatile int mReceivedMsgCnt;
-
+    private final AtomicInteger mReceivedMsgCnt = new AtomicInteger();
 
     public static interface Callbacks {
-        void onAutobaudCompleted(boolean isSuccessful, int baudrate);
+        SerialLineConfiguration getSerialLineConfiguration();
+        void setSerialLineConfiguration(SerialLineConfiguration conf);
+
+        void onAutobaudCompleted(int baudrate);
+        void onAutobaudFailed();
     };
 
-
-    public AutobaudTask(Context ctx, UsbSerialController usbController, AutobaudTask.Callbacks callbacks) {
+    public AutobaudTask(Context ctx, AutobaudTask.Callbacks callbacks) {
         mDefaultBaudrateProbeList = ctx.getResources().getIntArray(R.array.usb_serial_auto_baudrate_probe_list);
-        mUsbController = usbController;
         mSharedPrefs = PreferenceManager.getDefaultSharedPreferences(ctx);
         mCallbacks = callbacks != null ? callbacks : sDummyCallbacks;
     }
@@ -58,17 +65,17 @@ public class AutobaudTask extends Thread {
         bauds = getBaudrateProbeList();
         baudFound = false;
         validBaudrate = 0;
-        serialConf = mUsbController.getSerialLineConfiguration();
+        serialConf = mCallbacks.getSerialLineConfiguration();
         serialConf.setAutoBaudrateDetection(false);
         try {
             synchronized (this) {
                 for (int baud: bauds) {
                     serialConf.setBaudrate(baud);
                     if (DBG) Log.v(TAG, "Trying " + serialConf);
-                    mUsbController.setSerialLineConfiguration(serialConf);
-                    mReceivedMsgCnt = 0;
+                    mCallbacks.setSerialLineConfiguration(serialConf);
+                    mReceivedMsgCnt.set(0);
                     wait(WAIT_MSG_TIMEOUT_MS);
-                    if (mReceivedMsgCnt >= MIN_VALID_MSG_CNT) {
+                    if (mReceivedMsgCnt.get() >= MIN_VALID_MSG_CNT) {
                         baudFound = true;
                         validBaudrate = baud;
                         break;
@@ -79,15 +86,16 @@ public class AutobaudTask extends Thread {
             Log.i(TAG, "Interrupted: " + e.toString());
         }finally {
             if (baudFound) {
-                setLastKnownBaudrate(validBaudrate);
+                saveLastKnownBaudrate(validBaudrate);
+                mCallbacks.onAutobaudCompleted(validBaudrate);
+            }else {
+                mCallbacks.onAutobaudFailed();
             }
-            mCallbacks.onAutobaudCompleted(baudFound, validBaudrate);
         }
     }
 
     public synchronized void onGpsMessageReceived(java.nio.ByteBuffer buf, int start, int size, int type) {
-        mReceivedMsgCnt += 1;
-        if (mReceivedMsgCnt >= MIN_VALID_MSG_CNT) {
+        if (mReceivedMsgCnt.addAndGet(1) >= MIN_VALID_MSG_CNT) {
             notifyAll();
         }
     }
@@ -97,7 +105,7 @@ public class AutobaudTask extends Thread {
                 -1);
     }
 
-    private void setLastKnownBaudrate(int baudrate) {
+    private void saveLastKnownBaudrate(int baudrate) {
         mSharedPrefs
             .edit()
             .putInt(UsbGpsProviderService.PREF_USB_SERIAL_LAST_KNOWN_AUTO_BAUDRATE,
