@@ -229,13 +229,13 @@ static inline void sleep_cycle(struct usb_reader_thread_ctx_t *ctx)
 {
   if (ctx->fast_cycle) {
     ctx->fast_cycle = false;
-    clock_gettime(CLOCK_MONOTONIC, &ctx->last_cycle_ts);
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &ctx->last_cycle_ts);
   }else {
     int diff_sec;
     struct timespec ts;
 
     ts = ctx->last_cycle_ts;
-    clock_gettime(CLOCK_MONOTONIC, &ctx->last_cycle_ts);
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &ctx->last_cycle_ts);
 
     diff_sec = ctx->last_cycle_ts.tv_sec - ts.tv_sec;
     if (diff_sec >= 0 && diff_sec <= 1) {
@@ -243,7 +243,7 @@ static inline void sleep_cycle(struct usb_reader_thread_ctx_t *ctx)
       diff_usec = 1000 * diff_sec + (long)(ctx->last_cycle_ts.tv_nsec / 1000) - (long)(ts.tv_nsec / 1000);
       if (diff_usec < DEFAULT_CYCLE_US && diff_usec >= 0) {
         usleep(DEFAULT_CYCLE_US - (useconds_t)diff_usec);
-        clock_gettime(CLOCK_MONOTONIC, &ctx->last_cycle_ts);
+        clock_gettime(CLOCK_MONOTONIC_COARSE, &ctx->last_cycle_ts);
       }
     }
   }

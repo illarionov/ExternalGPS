@@ -196,26 +196,13 @@ public class SettingsFragment extends PreferenceFragment {
             } else if (mDataLoggerSettings.isDataLoggerSettingsPref(key)) {
                 mDataLoggerSettings.updateSummaries();
                 ((BaseAdapter)getPreferenceScreen().getRootAdapter()).notifyDataSetChanged();
-            } else if (UsbGpsProviderService.PREF_START_GPS_PROVIDER.equals(key)){
+            } else if (UsbGpsProviderService.PREF_START_GPS_PROVIDER.equals(key)) {
                 boolean val = sharedPreferences.getBoolean(key, false);
-                if (val){
+                if (val) {
                     mCallbacks.startGpsProviderService();
                 } else {
                     mCallbacks.stopGpsProviderService();
                 }
-            } else if (UsbGpsProviderService.PREF_SIRF_ENABLE_GLL.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_GGA.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_RMC.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_VTG.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_GSA.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_GSV.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_ZDA.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_SBAS.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_NMEA.equals(key)
-                    || UsbGpsProviderService.PREF_SIRF_ENABLE_STATIC_NAVIGATION.equals(key)
-            ){
-                final boolean enabled = sharedPreferences.getBoolean(key, false);
-                mCallbacks.setSirfFeature(key, enabled);
             }
             updateDevicePreferenceList();
         }

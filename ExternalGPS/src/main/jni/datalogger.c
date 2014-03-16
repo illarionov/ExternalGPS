@@ -37,7 +37,7 @@ void datalogger_init(struct datalogger_t *datalogger)
   datalogger->logs_dir[0] = '\0';
   datalogger->log_prefix[0] = '\0';
   datalogger->cur_file_name[0] = '\0';
-  clock_gettime(CLOCK_MONOTONIC, &datalogger->last_flush_ts);
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &datalogger->last_flush_ts);
 }
 
 void datalogger_destroy(struct datalogger_t *logger)
@@ -124,7 +124,7 @@ void datalogger_start(struct datalogger_t *logger)
   else
     ext = "raw";
 
-  clock_gettime(CLOCK_MONOTONIC, &logger->last_flush_ts);
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &logger->last_flush_ts);
 
   tt = time(NULL);
   if (strftime(timestamp, sizeof(timestamp), "%Y%b%d_%H-%M", localtime(&tt)) == 0) {
@@ -175,7 +175,7 @@ static bool logfile_flush_unlocked(struct datalogger_t *logger)
   if (logger->cur_file_name[0] == '\0')
     return true;
 
-  clock_gettime(CLOCK_MONOTONIC, &logger->last_flush_ts);
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &logger->last_flush_ts);
 
   fd = open(logger->cur_file_name, O_WRONLY | O_APPEND | O_CREAT, 00644);
   if (fd < 0) {
@@ -256,7 +256,7 @@ static void logfile_write_unlocked(struct datalogger_t * __restrict logger, cons
     logfile_flush_unlocked(logger);
   }else {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
     if ((ts.tv_sec < logger->last_flush_ts.tv_sec)
         || (ts.tv_sec - logger->last_flush_ts.tv_sec) >= DATA_LOGGER_FLUSH_INTERVAL_SEC) {
       logfile_flush_unlocked(logger);

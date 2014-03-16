@@ -25,89 +25,93 @@
 package ru0xdc.externalgps;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import ru0xdc.externalgps.usb.SerialLineConfiguration;
 
-
-/**
- * TODO
- * A Service used to replace Android internal GPS with a bluetooth GPS and/or write GPS NMEA data in a File.
- *
- * @author Herbert von Broeuschmeul, Alexey Illarionov
- *
- */
 public class UsbGpsProviderService extends Service {
 
     @SuppressWarnings("unused")
     private static final boolean DBG = BuildConfig.DEBUG & true;
     static final String TAG = UsbGpsProviderService.class.getSimpleName();
 
-	public static final String ACTION_START_GPS_PROVIDER = UsbGpsProviderService.class.getName() + ".action.ACTION_START_GPS_PROVIDER";
-	public static final String ACTION_STOP_GPS_PROVIDER = UsbGpsProviderService.class.getName() + ".action.ACTION_STOP_GPS_PROVIDER";
-	public static final String ACTION_CONFIGURE_SIRF_GPS = UsbGpsProviderService.class.getName() + ".action.ACTION_CONFIGURE_SIRF_GPS";
+    public static final String ACTION_START_GPS_PROVIDER = UsbGpsProviderService.class.getName() + ".action.ACTION_START_GPS_PROVIDER";
+    public static final String ACTION_STOP_GPS_PROVIDER = UsbGpsProviderService.class.getName() + ".action.ACTION_STOP_GPS_PROVIDER";
+    public static final String ACTION_CONFIGURE_SIRF_GPS = UsbGpsProviderService.class.getName() + ".action.ACTION_CONFIGURE_SIRF_GPS";
 
-	public static final String PREF_START_GPS_PROVIDER = "startGps";
-	public static final String PREF_GPS_LOCATION_PROVIDER = "gpsLocationProviderKey";
-	public static final String PREF_REPLACE_STD_GPS = "replaceStdGps";
-	public static final String PREF_FORCE_ENABLE_PROVIDER = "forceEnableProvider";
-	public static final String PREF_MOCK_GPS_NAME = "mockGpsName";
-	public static final String PREF_CONNECTION_RETRIES = "connectionRetries";
-	public static final String PREF_LOG_RAW_DATA_SCREEN = "logRawDataScreen";
-	public static final String PREF_LOG_RAW_DATA = "logRawData";
-	public static final String PREF_RAW_DATA_LOG_FORMAT = "rawDataLogFormat";
-	public static final String PREF_TRACK_FILE_DIR = "trackFileDirectory";
-	public static final String PREF_TRACK_FILE_PREFIX = "trackFilePrefix";
-	public static final String PREF_USB_SERIAL_SETTINGS = "usbSerialSettings";
-	public static final String PREF_USB_SERIAL_BAUDRATE = "usbSerialBaudrate";
-	public static final String PREF_USB_SERIAL_DATA_BITS = "usbSerialDataBits";
-	public static final String PREF_USB_SERIAL_PARITY = "usbSerialParity";
-	public static final String PREF_USB_SERIAL_STOP_BITS = "usbSerialStopBits";
-	public static final String PREF_USB_SERIAL_LAST_KNOWN_AUTO_BAUDRATE = "usbSerialLastKnownAutoBaudrate";
-	public static final String PREF_ABOUT = "about";
+    public static final String PREF_START_GPS_PROVIDER = "startGps";
+    public static final String PREF_GPS_LOCATION_PROVIDER = "gpsLocationProviderKey";
+    public static final String PREF_REPLACE_STD_GPS = "replaceStdGps";
+    public static final String PREF_FORCE_ENABLE_PROVIDER = "forceEnableProvider";
+    public static final String PREF_MOCK_GPS_NAME = "mockGpsName";
+    public static final String PREF_CONNECTION_RETRIES = "connectionRetries";
+    public static final String PREF_LOG_RAW_DATA_SCREEN = "logRawDataScreen";
+    public static final String PREF_LOG_RAW_DATA = "logRawData";
+    public static final String PREF_RAW_DATA_LOG_FORMAT = "rawDataLogFormat";
+    public static final String PREF_TRACK_FILE_DIR = "trackFileDirectory";
+    public static final String PREF_TRACK_FILE_PREFIX = "trackFilePrefix";
+    public static final String PREF_USB_SERIAL_SETTINGS = "usbSerialSettings";
+    public static final String PREF_USB_SERIAL_BAUDRATE = "usbSerialBaudrate";
+    public static final String PREF_USB_SERIAL_DATA_BITS = "usbSerialDataBits";
+    public static final String PREF_USB_SERIAL_PARITY = "usbSerialParity";
+    public static final String PREF_USB_SERIAL_STOP_BITS = "usbSerialStopBits";
+    public static final String PREF_USB_SERIAL_LAST_KNOWN_AUTO_BAUDRATE = "usbSerialLastKnownAutoBaudrate";
+    public static final String PREF_ABOUT = "about";
 
-	public static final String PREF_SIRF_GPS = "sirfGps";
-	public static final String PREF_SIRF_ENABLE_GGA = "enableGGA";
-	public static final String PREF_SIRF_ENABLE_RMC = "enableRMC";
-	public static final String PREF_SIRF_ENABLE_GLL = "enableGLL";
-	public static final String PREF_SIRF_ENABLE_VTG = "enableVTG";
-	public static final String PREF_SIRF_ENABLE_GSA = "enableGSA";
-	public static final String PREF_SIRF_ENABLE_GSV = "enableGSV";
-	public static final String PREF_SIRF_ENABLE_ZDA = "enableZDA";
-	public static final String PREF_SIRF_ENABLE_SBAS = "enableSBAS";
-	public static final String PREF_SIRF_ENABLE_NMEA = "enableNMEA";
-	public static final String PREF_SIRF_ENABLE_STATIC_NAVIGATION = "enableStaticNavigation";
+    public final static String ACTION_USB_ATTACHED =
+            UsbGpsProviderService.class.getName() + ".ACTION_USB_ATTACHED";
+    public final static String ACTION_USB_DETACHED =
+            UsbGpsProviderService.class.getName() + ".ACTION_USB_DETACHED";
 
-	private Notificator mNotificator;
-	private UsbGpsConverter mConverter;
+    public final static String ACTION_AUTOCONF_STARTED =
+            UsbGpsProviderService.class.getName() + ".ACTION_AUTOCONF_STARTED";
+    public final static String ACTION_AUTOCONF_STOPPED =
+            UsbGpsProviderService.class.getName() + ".ACTION_AUTOCONF_STOPPED";
 
-	@Override
-	public void onCreate() {
-		super.onCreate();
-		mConverter = new UsbGpsConverter(this);
-		mNotificator = new Notificator(this);
-	}
+    public final static String ACTION_VALID_GPS_MESSAGE_RECEIVED =
+            UsbGpsProviderService.class.getName() + ".ACTION_VALID_GPS_MESSAGE_RECEIVED";
+    public final static String ACTION_VALID_LOCATION_RECEIVED =
+            UsbGpsProviderService.class.getName() + ".ACTION_VALID_LOCATION_RECEIVED";
 
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
+    public final static String EXTRA_DATA =
+            UsbGpsProviderService.class.getName() + ".EXTRA_DATA";
 
+    private Notificator mNotificator;
+    private MockLocationProvider mLocationProvider = new MockLocationProvider();
+    private UsbGpsConverter mConverter;
+
+    private LocalBroadcastManager mBroadcastManager;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        mBroadcastManager = LocalBroadcastManager.getInstance(this);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) {
             Log.v(TAG, "UsbGpsProviderService restarted");
             processStartGpsProvider();
-        }else {
+        } else {
             final String action = intent.getAction();
             if (action.equals(ACTION_START_GPS_PROVIDER)) processStartGpsProvider();
-            else if(action.equals(ACTION_STOP_GPS_PROVIDER)) processStopGpsProvider();
-            else if(action.equals(ACTION_CONFIGURE_SIRF_GPS)) processConfigureSirfGps(intent.getExtras());
+            else if (action.equals(ACTION_STOP_GPS_PROVIDER)) processStopGpsProvider();
+            else if (action.equals(ACTION_CONFIGURE_SIRF_GPS))
+                processConfigureSirfGps(intent.getExtras());
             else Log.e(TAG, "onStartCommand(): unknown action " + action);
         }
         return START_STICKY;
-	}
+    }
 
     @Override
     public IBinder onBind(Intent arg0) {
@@ -117,23 +121,21 @@ public class UsbGpsProviderService extends Service {
     @Override
     public void onDestroy() {
         stop();
-        mNotificator = null;
-        mConverter = null;
+        mBroadcastManager = null;
     }
 
-
     public boolean isServiceStarted() {
-        return mConverter.isActive();
+        return mLocationProvider.isAttached();
     }
 
 
     private void processStartGpsProvider() {
         final SharedPreferences prefs;
         final String providerName;
-        final MockLocationProvider provider;
         final boolean replaceInternalGps;
         final SerialLineConfiguration usbSerialLineConf;
         final DataLoggerConfiguration dataLoggerConf;
+        final LocationManager lm;
 
         if (isServiceStarted()) return;
 
@@ -143,13 +145,16 @@ public class UsbGpsProviderService extends Service {
         replaceInternalGps = prefs.getBoolean(PREF_REPLACE_STD_GPS, false);
 
         usbSerialLineConf = SettingsFragment.UsbSerialSettings.readConf(prefs);
-
         dataLoggerConf = SettingsFragment.DataLoggerSettings.readConf(prefs);
 
-        provider = new MockLocationProvider(providerName);
-        provider.replaceInternalGps(replaceInternalGps);
+        mConverter = new UsbGpsConverter(this, mUsbGpsConverterCallbacks);
+        mNotificator = new Notificator(this);
 
-        mConverter.setLocationProvider(provider);
+        lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        mLocationProvider.setName(providerName);
+        mLocationProvider.replaceInternalGps(replaceInternalGps);
+        mLocationProvider.attach(lm);
+
         mConverter.setDataLoggerConfiguration(dataLoggerConf);
         mConverter.setSerialLineConfiguration(usbSerialLineConf);
         mConverter.start();
@@ -174,7 +179,63 @@ public class UsbGpsProviderService extends Service {
 
         if (isServiceStarted()) {
             mConverter.stop();
+            mLocationProvider.detach();
             mNotificator.onServiceStopped();
+
+            mNotificator = null;
+            mConverter = null;
         }
     }
+
+    private final UsbGpsConverter.Callbacks mUsbGpsConverterCallbacks = new UsbGpsConverter.Callbacks() {
+
+        @Override
+        public void onStateConnected() {
+            mLocationProvider.setDeviceStatus(MockLocationProvider.Status.TEMPORARILY_UNAVAILABLE);
+            Intent i = new Intent(ACTION_USB_ATTACHED);
+            mBroadcastManager.sendBroadcast(i);
+        }
+
+        @Override
+        public void onDisconnected() {
+            mLocationProvider.setDeviceStatus(MockLocationProvider.Status.OUT_OF_SERVICE);
+            Intent i = new Intent(ACTION_USB_DETACHED);
+            mBroadcastManager.sendBroadcast(i);
+        }
+
+        @Override
+        public void onLocationUnknown() {
+            mLocationProvider.setLocation(null);
+        }
+
+        @Override
+        public void onLocationReceived(Location location) {
+            mLocationProvider.setLocation(location);
+            Intent i = new Intent(ACTION_VALID_LOCATION_RECEIVED);
+            mBroadcastManager.sendBroadcast(i);
+        }
+
+        @Override
+        public void onFirstLocationReceived(Location location) {
+            Intent i = new Intent(ACTION_VALID_LOCATION_RECEIVED);
+            mBroadcastManager.sendBroadcast(i);
+        }
+
+        @Override
+        public void onAutoconfStarted() {
+            Intent i = new Intent(ACTION_AUTOCONF_STARTED);
+            mBroadcastManager.sendBroadcast(i);
+        }
+
+        @Override
+        public void onAutobaoudCompleted(int newBaudrate) {
+            Intent i = new Intent(ACTION_AUTOCONF_STOPPED);
+            mBroadcastManager.sendBroadcast(i);
+        }
+
+        @Override
+        public void onAutobaoudFailed() {
+
+        }
+    };
 }

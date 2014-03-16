@@ -2,6 +2,8 @@ package ru0xdc.externalgps.usb;
 
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -34,12 +36,6 @@ public class UsbServiceThread extends Thread {
     protected volatile long mObject;
 
     @GuardedBy("this")
-    private volatile UsbSerialController.UsbSerialInputStream mInputStream;
-
-    @GuardedBy("this")
-    private volatile UsbSerialController.UsbSerialOutputStream mOutputStream;
-
-    @GuardedBy("this")
     private volatile UsbGpsConverter.TransportState mConnectionState;
 
     private final AtomicBoolean mCancelRequested = new AtomicBoolean();
@@ -55,11 +51,9 @@ public class UsbServiceThread extends Thread {
 
         public Context getContext();
 
-        public SerialLineConfiguration getSerialLineConfiguration();
-        public void setSerialLineConfiguration(SerialLineConfiguration configuration);
+        public UsbDevice getUsbDevice();
 
-        public UsbSerialController.UsbSerialInputStream getInputStream();
-        public UsbSerialController.UsbSerialOutputStream getOutputStream();
+        public SerialLineConfiguration getSerialLineConfiguration();
 
         public void onStateConnected();
         public void onDisconnected();
@@ -75,19 +69,22 @@ public class UsbServiceThread extends Thread {
 
     private final Callbacks mCallbacks;
 
+    @GuardedBy("this")
+    private UsbSerialController mUsbController;
+
     public UsbServiceThread(Callbacks callbacks) {
-        mInputStream = null;
-        mOutputStream = null;
         mConnectionState = UsbGpsConverter.TransportState.IDLE;
         mAutobaudThread = null;
         mCallbacks = callbacks;
         native_create();
     }
 
-    public void cancel() {
-        // if (UsbGpsConverter.DBG) assertTrue(Thread.holdsLock(usbReceiver.mLock));
+    public synchronized void cancel() {
         mCancelRequested.set(true);
-        // XXX: controller.detach()
+        if (mUsbController != null) {
+            mUsbController.detach();
+            mUsbController = null;
+        }
     }
 
     /**
@@ -101,7 +98,10 @@ public class UsbServiceThread extends Thread {
                 Log.e(TAG, "write() error: not connected");
                 return;
             }
-            os = mOutputStream;
+            if (mUsbController == null) {
+                Log.e(TAG, "write() error: no usb controller");
+            }
+            os = mUsbController.getOutputStream();
         }
         os.write(buffer, offset, count);
     }
@@ -121,14 +121,26 @@ public class UsbServiceThread extends Thread {
             throwIfCancelRequested();
             connectLoop();
 
-            setState(UsbGpsConverter.TransportState.CONNECTED);
             mCallbacks.onStateConnected();
-
             mCallbacks.onAutoconfStarted();
             startInitBaudrate();
 
-            native_read_loop(mInputStream, mOutputStream);
+            final UsbSerialController.UsbSerialInputStream is;
+            final UsbSerialController.UsbSerialOutputStream os;
+            synchronized (this) {
+                is = mUsbController.getInputStream();
+                os = mUsbController.getOutputStream();
+            }
+
+            native_read_loop(is, os);
             throwIfCancelRequested();
+
+            synchronized (this) {
+                if (mUsbController != null) {
+                    mUsbController.detach();
+                    mUsbController = null;
+                }
+            }
 
             setState(UsbGpsConverter.TransportState.RECONNECTING);
             mCallbacks.onDisconnected();
@@ -230,7 +242,7 @@ public class UsbServiceThread extends Thread {
     }
 
     private void startInitBaudrate() {
-        synchronized(this) {
+        synchronized(UsbServiceThread.this) {
             if (mCallbacks.getSerialLineConfiguration().isAutoBaudrateDetectionEnabled()) {
                 // refreshDataLoggerCofiguration(new DataLoggerConfiguration().setEnabled(false));
                 mAutobaudThread = new AutobaudTask(mCallbacks.getContext(), mAutobaudThreadCallbacks);
@@ -250,12 +262,14 @@ public class UsbServiceThread extends Thread {
 
         @Override
         public void setSerialLineConfiguration(SerialLineConfiguration conf) {
-            mCallbacks.setSerialLineConfiguration(conf);
+            synchronized (UsbServiceThread.this) {
+                if (mUsbController != null) mUsbController.setSerialLineConfiguration(conf);
+            }
         }
 
         @Override
         public void onAutobaudCompleted(int baudrate) {
-            synchronized (this) {
+            synchronized (UsbServiceThread.this) {
                 if (DBG) Log.v(TAG, "onAutobaudCompleted() baudrate: " + baudrate);
                 mAutobaudThread = null;
                 native_msg_rcvd_cb(false);
@@ -268,7 +282,7 @@ public class UsbServiceThread extends Thread {
 
         @Override
         public void onAutobaudFailed() {
-            synchronized(this) {
+            synchronized(UsbServiceThread.this) {
                 if (DBG) Log.v(TAG, "onAutobaudFailed() ");
                 mAutobaudThread = null;
                 native_msg_rcvd_cb(false);
@@ -279,11 +293,16 @@ public class UsbServiceThread extends Thread {
     };
 
     private void connect() throws UsbSerialController.UsbControllerException, CancelRequestedException {
+        UsbManager um = (UsbManager) mCallbacks.getContext().getSystemService(Context.USB_SERVICE);
         synchronized(this) {
             throwIfCancelRequested();
-            // mCallbacks.attachSerialController();
-            mInputStream = mCallbacks.getInputStream();
-            mOutputStream = mCallbacks.getOutputStream();
+            mUsbController = UsbUtils.probeDevice(um, mCallbacks.getUsbDevice());
+            if (mUsbController == null) {
+                throw new UsbSerialController.UsbControllerException("probeDevice() failed");
+            }
+            mUsbController.setSerialLineConfiguration(mCallbacks.getSerialLineConfiguration());
+            mUsbController.attach();
+            setState(UsbGpsConverter.TransportState.CONNECTED);
         }
     }
 
@@ -313,6 +332,10 @@ public class UsbServiceThread extends Thread {
         private static final long serialVersionUID = 1L;
     }
 
+    static {
+        System.loadLibrary("usbconverter");
+    }
+
     private native void native_create();
     private native void native_read_loop(UsbSerialController.UsbSerialInputStream inputStream, UsbSerialController.UsbSerialOutputStream outputStream);
     private native void native_destroy();
@@ -323,4 +346,6 @@ public class UsbServiceThread extends Thread {
     native void native_datalogger_configure(boolean enabled, int format, String tracksDir, String filePrefix);
     private native void native_datalogger_start();
     private native void native_datalogger_stop();
+
+
 }

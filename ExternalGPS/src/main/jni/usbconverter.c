@@ -23,6 +23,10 @@
 #define LOGV(...)  do {} while (0)
 #endif
 
+#define RU0XDC_EXTERNALGPS "ru0xdc/externalgps"
+#define RU0XDC_EXTERNALGPS_USB RU0XDC_EXTERNALGPS "/usb"
+#define RU0XDC_EXTERNALGPS_USB_USB_SERIAL_CONTROLLER RU0XDC_EXTERNALGPS_USB "/UsbSerialController"
+
 #define EXCEPTION_ILLEGAL_ARGUMENT "java/lang/IllegalArgumentException"
 #define EXCEPTION_ILLEGAL_STATE "java/lang/IllegalStateException"
 #define EXCEPTION_NULL_POINTER  "java/lang/NullPointerException"
@@ -298,7 +302,7 @@ static void read_loop(JNIEnv *env, jobject this, struct native_ctx_t *reader)
         sizeof(stream->rx_buf)-stream->rxbuf_pos,
         &READ_TIMEOUT);
     last_errno = errno;
-    clock_gettime(CLOCK_MONOTONIC, &stream->last_event_ts);
+    clock_gettime(CLOCK_MONOTONIC_COARSE, &stream->last_event_ts);
     if (rcvd < 0) {
       if (last_errno == ETIMEDOUT) {
         LOGV("usb read timeout");
@@ -557,11 +561,11 @@ static JNINativeMethod native_methods[] = {
   {"native_create", "()V", (void*)native_create},
   {"native_destroy", "()V", (void*)native_destroy},
   {"native_read_loop", "("
-    "Lru0xdc/externalgps/usb/UsbSerialController$UsbSerialInputStream;"
-      "Lru0xdc/externalgps/usb/UsbSerialController$UsbSerialOutputStream;"
+    "L" RU0XDC_EXTERNALGPS_USB_USB_SERIAL_CONTROLLER "$UsbSerialInputStream;"
+      "L" RU0XDC_EXTERNALGPS_USB_USB_SERIAL_CONTROLLER "$UsbSerialOutputStream;"
       ")V", (void*)native_read_loop},
   { "native_get_stats",
-    "(Lru0xdc/externalgps/StatsNative;)V",
+    "(L" RU0XDC_EXTERNALGPS "/StatsNative;)V",
     (void*)native_get_stats},
   { "native_msg_rcvd_cb", "(Z)V", (void*)native_msg_rcvd_cb },
   { "native_datalogger_configure", "(ZILjava/lang/String;Ljava/lang/String;)V", (void*)native_datalogger_configure },
@@ -570,7 +574,7 @@ static JNINativeMethod native_methods[] = {
 };
 
 int register_usb_converter_natives(JNIEnv* env) {
-  jclass clazz = (*env)->FindClass(env, "Lru0xdc/externalgps/UsbGpsConverter$UsbReceiver$UsbServiceThread");
+  jclass clazz = (*env)->FindClass(env, "L" RU0XDC_EXTERNALGPS_USB "/UsbServiceThread");
 
   if (clazz == NULL)
     return JNI_FALSE;

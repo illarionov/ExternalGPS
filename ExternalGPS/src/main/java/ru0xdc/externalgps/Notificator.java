@@ -57,12 +57,12 @@ public class Notificator {
 
     private IntentFilter createIntentFilter() {
         IntentFilter f = new IntentFilter();
-        f.addAction(UsbGpsConverter.ACTION_USB_ATTACHED);
-        f.addAction(UsbGpsConverter.ACTION_USB_DETACHED);
-        f.addAction(UsbGpsConverter.ACTION_AUTOCONF_STARTED);
-        f.addAction(UsbGpsConverter.ACTION_AUTOCONF_STOPPED);
-        f.addAction(UsbGpsConverter.ACTION_VALID_GPS_MESSAGE_RECEIVED);
-        f.addAction(UsbGpsConverter.ACTION_VALID_LOCATION_RECEIVED);
+        f.addAction(UsbGpsProviderService.ACTION_USB_ATTACHED);
+        f.addAction(UsbGpsProviderService.ACTION_USB_DETACHED);
+        f.addAction(UsbGpsProviderService.ACTION_AUTOCONF_STARTED);
+        f.addAction(UsbGpsProviderService.ACTION_AUTOCONF_STOPPED);
+        f.addAction(UsbGpsProviderService.ACTION_VALID_GPS_MESSAGE_RECEIVED);
+        f.addAction(UsbGpsProviderService.ACTION_VALID_LOCATION_RECEIVED);
 
         return f;
     }
@@ -72,17 +72,17 @@ public class Notificator {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            if (UsbGpsConverter.ACTION_USB_ATTACHED.equals(action)) {
+            if (UsbGpsProviderService.ACTION_USB_ATTACHED.equals(action)) {
                 onUsbAttached();
-            }else if (UsbGpsConverter.ACTION_USB_DETACHED.equals(action)) {
+            }else if (UsbGpsProviderService.ACTION_USB_DETACHED.equals(action)) {
                 onUsbDetached();
-            }else if (UsbGpsConverter.ACTION_AUTOCONF_STARTED.equals(action)) {
+            }else if (UsbGpsProviderService.ACTION_AUTOCONF_STARTED.equals(action)) {
                 onAutoconfStarted();
-            }else if (UsbGpsConverter.ACTION_AUTOCONF_STOPPED.equals(action)) {
+            }else if (UsbGpsProviderService.ACTION_AUTOCONF_STOPPED.equals(action)) {
                 onAutoconfStopped();
-            }else if (UsbGpsConverter.ACTION_VALID_GPS_MESSAGE_RECEIVED.equals(action)) {
+            }else if (UsbGpsProviderService.ACTION_VALID_GPS_MESSAGE_RECEIVED.equals(action)) {
                 onValidGpsMessageReceived();
-            }else if (UsbGpsConverter.ACTION_VALID_LOCATION_RECEIVED.equals(action)) {
+            }else if (UsbGpsProviderService.ACTION_VALID_LOCATION_RECEIVED.equals(action)) {
                 onValidLocationReceived();
             }else {
                 throw new IllegalStateException();

@@ -48,7 +48,7 @@ void stats_reset_unlocked(struct stats_t *stats)
 void stats_start_unlocked(struct stats_t *stats)
 {
   stats_reset_unlocked(stats);
-  clock_gettime(CLOCK_MONOTONIC, &stats->start_ts);
+  clock_gettime(CLOCK_MONOTONIC_COARSE, &stats->start_ts);
 }
 
 static inline jlong timespec2java_ts(struct timespec ts)

@@ -1,7 +1,5 @@
 package ru0xdc.externalgps;
 
-import static junit.framework.Assert.assertTrue;
-
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -9,58 +7,27 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
-import android.location.LocationManager;
-import android.os.ConditionVariable;
+import android.location.Location;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import ru0xdc.externalgps.usb.SerialLineConfiguration;
-import ru0xdc.externalgps.usb.UsbSerialController;
 import ru0xdc.externalgps.usb.UsbServiceThread;
 import ru0xdc.externalgps.usb.UsbUtils;
 
-import java.io.IOException;
-
-import javax.annotation.concurrent.GuardedBy;
-
 public class UsbGpsConverter {
-
     private static final boolean DBG = BuildConfig.DEBUG & true;
     static final String TAG = UsbGpsConverter.class.getSimpleName();
 
-    public final static String ACTION_USB_ATTACHED =
-            UsbGpsConverter.class.getName() + ".ACTION_USB_ATTACHED";
-    public final static String ACTION_USB_DETACHED =
-            UsbGpsConverter.class.getName() + ".ACTION_USB_DETACHED";
+    public static final String ACTION_USB_DEVICE_ATTACHED =
+            UsbGpsProviderService.class.getName() + ".ACTION_USB_DEVICE_ATTACHED";
 
-    public final static String ACTION_AUTOCONF_STARTED =
-            UsbGpsConverter.class.getName() + ".ACTION_AUTOCONF_STARTED";
-    public final static String ACTION_AUTOCONF_STOPPED =
-            UsbGpsConverter.class.getName() + ".ACTION_AUTOCONF_STOPPED";
-
-    public final static String ACTION_VALID_GPS_MESSAGE_RECEIVED =
-            UsbGpsConverter.class.getName() + ".ACTION_VALID_GPS_MESSAGE_RECEIVED";
-    public final static String ACTION_VALID_LOCATION_RECEIVED =
-            UsbGpsConverter.class.getName() + ".ACTION_VALID_LOCATION_RECEIVED";
-
-    public final static String EXTRA_DATA =
-            UsbGpsConverter.class.getName() + ".EXTRA_DATA";
-
-    final String ACTION_USB_PERMISSION = UsbGpsConverter.class.getName() + ".USB_PERMISSION";
-
-    final Object mLock = new Object();
-
-    @GuardedBy("mLock")
-    private final SerialLineConfiguration mSerialLineConfiguration;
-
-    @GuardedBy("mLock")
-    private final DataLoggerConfiguration mDataLoggerConfiguration;
-
-    private UsbManager mUsbManager;
-
-    @GuardedBy("UsbReceiver.this.mLock")
-    private volatile UsbServiceThread mServiceThread;
-
+    public static final int RECONNECT_TIMEOUT_MS = 2000;
 
     // Constants that indicate the current connection state
     public static enum TransportState {
@@ -69,45 +36,81 @@ public class UsbGpsConverter {
         CONNECTED,
         WAITING,
         RECONNECTING
-    };
-
-    public static final String ACTION_USB_DEVICE_ATTACHED =
-            UsbGpsConverter.class.getName() + ".ACTION_USB_DEVICE_ATTACHED";
-
-    public static final int RECONNECT_TIMEOUT_MS = 2000;
-
-    private final Context mContext;
-    private final LocalBroadcastManager mBroadcastManager;
-    private MockLocationProvider mLocationProvider;
-
-
-    public UsbGpsConverter(Context serviceContext) {
-        this(serviceContext, new MockLocationProvider());
     }
 
-    public UsbGpsConverter(Context serviceContext, MockLocationProvider provider) {
-        mContext = serviceContext;
-        mLocationProvider = provider;
-        mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
+    public interface Callbacks {
+        public void onStateConnected();
+        public void onDisconnected();
 
-        this.mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+        public void onLocationUnknown();
+        public void onLocationReceived(Location location);
+        public void onFirstLocationReceived(Location location);
+
+        public void onAutoconfStarted();
+        public void onAutobaoudCompleted(int newBaudrate);
+        public void onAutobaoudFailed();
+    }
+
+    final String ACTION_USB_PERMISSION = UsbGpsConverter.class.getName() + ".USB_PERMISSION";
+
+    private final Context mContext;
+    private final UsbManager mUsbManager;
+    private final Callbacks mCallbacks;
+
+    @GuardedBy("this")
+    private final SerialLineConfiguration mSerialLineConfiguration;
+    @GuardedBy("this")
+    private final DataLoggerConfiguration mDataLoggerConfiguration;
+
+    private UsbServiceThread mServiceThread;
+    @GuardedBy("this")
+    private volatile UsbDevice mUsbDevice;
+
+    private final HandlerThread mHandlerThread;
+    private final Handler mHandler;
+
+    public UsbGpsConverter(Context serviceContext, Callbacks callbacks) {
+        mContext = serviceContext;
+        mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
         mSerialLineConfiguration = new SerialLineConfiguration();
         mDataLoggerConfiguration = new DataLoggerConfiguration();
 
         if (mUsbManager == null) throw new IllegalStateException("USB not available");
+
+        mHandlerThread = new HandlerThread(UsbGpsConverter.class.getSimpleName());
+        mHandlerThread.start();
+        mHandler = new Handler(mHandlerThread.getLooper());
+
+        mCallbacks = callbacks;
+    }
+
+    public void setSerialLineConfiguration(final SerialLineConfiguration conf) {
+        synchronized (this) {
+            mSerialLineConfiguration.set(conf);
+        }
+    }
+
+    public void setDataLoggerConfiguration(final DataLoggerConfiguration conf) {
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (UsbGpsConverter.this) {
+                    mDataLoggerConfiguration.set(conf);
+                }
+                if (mServiceThread != null) {
+                    // mUsbReceiver.mServiceThread.refreshDataLoggerCofiguration();
+                }
+            }
+        });
     }
 
     public void start() {
-        final LocationManager lm = (LocationManager)mContext.getSystemService(Context.LOCATION_SERVICE);
-        mLocationProvider.attach(lm);
-        final IntentFilter f;
-        f = new IntentFilter();
+        IntentFilter f = new IntentFilter();
         f.addAction(ACTION_USB_DEVICE_ATTACHED);
         f.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         f.addAction(ACTION_USB_PERMISSION);
 
-        mContext.registerReceiver(mUsbStateListener, f);
-
+        mContext.registerReceiver(mUsbStateListener, f, null, mHandler);
         try {
             final UsbDevice d = UsbUtils.findSupportedDevices(mUsbManager).get(0);
             requestPermission(d);
@@ -116,45 +119,17 @@ public class UsbGpsConverter {
 
     public void stop() {
         mContext.unregisterReceiver(mUsbStateListener);
-        synchronized(mLock) {
-            mServiceThread.cancel();
-            mServiceThread = null;
-        }
-        mLocationProvider.detach();
-    }
 
-    public boolean isActive() {
-        return mLocationProvider.isAttached();
-    }
-
-    public void setLocationProvider(MockLocationProvider provider) {
-        if (provider == null) throw new NullPointerException();
-        mLocationProvider = provider;
-    }
-
-    public final MockLocationProvider getLocationProvider() {
-        return mLocationProvider;
-    }
-
-    public void setSerialLineConfiguration(final SerialLineConfiguration conf) {
-        synchronized(mLock) {
-            this.mSerialLineConfiguration.set(conf);
-        }
-    }
-
-    public SerialLineConfiguration getSerialLineConfiguration() {
-        synchronized(mLock) {
-            return new SerialLineConfiguration(mSerialLineConfiguration);
-        }
-    }
-
-    public void setDataLoggerConfiguration(DataLoggerConfiguration conf) {
-        synchronized(mLock) {
-            mDataLoggerConfiguration.set(conf);
-            if (mServiceThread != null) {
-                // mUsbReceiver.mServiceThread.refreshDataLoggerCofiguration();
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mServiceThread != null) {
+                    mServiceThread.cancel();
+                    mServiceThread = null;
+                }
+                mHandlerThread.quit();
             }
-        }
+        });
     }
 
     private void requestPermission(UsbDevice d) {
@@ -166,6 +141,68 @@ public class UsbGpsConverter {
         mUsbManager.requestPermission(d, premissionIntent);
     }
 
+    private UsbServiceThread.Callbacks mUsbServiceThreadCallbacks = new UsbServiceThread.Callbacks() {
+
+        @Override
+        public Context getContext() {
+            return mContext;
+        }
+
+        @Override
+        public UsbDevice getUsbDevice() {
+            synchronized(UsbGpsConverter.this) {
+                return mUsbDevice;
+            }
+        }
+
+        @Override
+        public SerialLineConfiguration getSerialLineConfiguration() {
+            synchronized (UsbGpsConverter.this) {
+                return mSerialLineConfiguration;
+            }
+        }
+
+        @Override
+        public void onStateConnected() {
+            mCallbacks.onStateConnected();
+        }
+
+        @Override
+        public void onDisconnected() {
+            mCallbacks.onDisconnected();
+        }
+
+        @Override
+        public void onLocationUnknown() {
+            mCallbacks.onLocationUnknown();
+        }
+
+        @Override
+        public void onLocationReceived(Location location) {
+            mCallbacks.onLocationReceived(location);
+        }
+
+        @Override
+        public void onFirstLocationReceived(Location location) {
+            mCallbacks.onFirstLocationReceived(location);
+        }
+
+        @Override
+        public void onAutoconfStarted() {
+            mCallbacks.onAutoconfStarted();
+        }
+
+        @Override
+        public void onAutobaoudCompleted(int newBaudrate) {
+            mCallbacks.onAutobaoudCompleted(newBaudrate);
+        }
+
+        @Override
+        public void onAutobaoudFailed() {
+            mCallbacks.onAutobaoudFailed();
+        }
+    };
+
     private final BroadcastReceiver mUsbStateListener = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -173,15 +210,15 @@ public class UsbGpsConverter {
             String action = intent.getAction();
             Log.v(TAG, "Received intent " + action);
 
-            if (action.equals(ACTION_USB_DEVICE_ATTACHED)) {
-                device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            if (ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 onUsbDeviceAttached(device);
-            }else if (action.equals(UsbManager.ACTION_USB_DEVICE_DETACHED)) {
-                device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            }else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 onUsbDeviceDetached(device);
-            }else if (action.equals(ACTION_USB_PERMISSION)) {
+            }else if (ACTION_USB_PERMISSION.equals(action)) {
                 boolean granted;
-                device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                 granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
                 if (granted) {
                     onUsbPermissionGranted(device);
@@ -190,42 +227,58 @@ public class UsbGpsConverter {
                 Log.e(TAG, "Unknown action " + action);
             }
         }
+
+        void onUsbDeviceAttached(final UsbDevice device) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (DBG) Log.d(TAG, "onUsbDeviceAttached() device=" + device.toString());
+                    if (mUsbDevice != null) {
+                        if (DBG) Log.d(TAG, "onUsbDeviceAttached() skipped");
+                        return;
+                    }
+                    if (UsbUtils.probeDevice(mUsbManager, device) != null) {
+                        requestPermission(device);
+                    }
+                }
+            });
+        }
+
+        void onUsbDeviceDetached(final UsbDevice device) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (DBG) Log.d(TAG, "onUsbDeviceDetached() device=" + device.toString());
+                    synchronized(UsbGpsConverter.this) {
+                        if (mUsbDevice == null) {
+                            if (DBG) Log.v(TAG, "onUsbDeviceDetached() skipped");
+                            return;
+                        }
+
+                        if (mUsbDevice.equals(device)) {
+                            mServiceThread.cancel();
+                            mServiceThread = null;
+                            mUsbDevice = null;
+                        }
+                    }
+                }
+            });
+        }
+
+        void onUsbPermissionGranted(final UsbDevice device) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (DBG) Log.d(TAG, "onUsbPermissionGranted() device=" + device.toString());
+                    synchronized (UsbGpsConverter.this) {
+                        if (mUsbDevice == null) {
+                            mUsbDevice = device;
+                            mServiceThread = new UsbServiceThread(mUsbServiceThreadCallbacks);
+                            mServiceThread.start();
+                        }
+                    }
+                }
+            });
+        }
     };
-
-    void onUsbDeviceAttached(UsbDevice device) {
-        if (DBG) Log.d(TAG, "onUsbDeviceAttached() device=" + device.toString());
-        if (UsbUtils.probeDevice(mUsbManager, device) != null) {
-            requestPermission(device);
-        }
-    }
-
-    void onUsbDeviceDetached(UsbDevice device) {
-        if (DBG) Log.d(TAG, "onUsbDeviceDetached() device=" + device.toString());
-        synchronized(mLock) {
-            if (mServiceThread == null) return;
-            UsbSerialController controller = mServiceThread.getController();
-            if (controller == null) return;
-            if (!device.equals(controller.getDevice())) return;
-
-            mServiceThread.setController(null);
-        }
-    }
-
-    void onUsbPermissionGranted(UsbDevice device) {
-        if (DBG) Log.d(TAG, "onUsbPermissionGranted() device=" + device.toString());
-        synchronized(mLock) {
-            if (mServiceThread == null) return;
-            UsbSerialController controller = mServiceThread.getController();
-            if (controller != null) return;
-            controller = UsbUtils.probeDevice(mUsbManager, device);
-            if (controller == null) return;
-
-            mServiceThread.setController(controller);
-        }
-    }
-
-    static {
-        System.loadLibrary("usbconverter");
-    }
-
 }
