@@ -99,7 +99,7 @@ public class SettingsActivity extends PreferenceActivity implements SettingsFrag
 	        activity = getActivity();
 	        inflater = activity.getLayoutInflater();
 
-	        messageView = inflater.inflate(R.layout.about, null, false);
+	        messageView = inflater.inflate(R.layout.about, null);
 	        // we need this to enable html links
             textView = (TextView) messageView.findViewById(R.id.about_license);
 	        textView.setMovementMethod(LinkMovementMethod.getInstance());

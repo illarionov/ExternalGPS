@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ExternalGPS/ExternalGPS.iml" filepath="$PROJECT_DIR$/ExternalGPS/ExternalGPS.iml" />
-      <module fileurl="file://$PROJECT_DIR$/ExternalGPSProject.iml" filepath="$PROJECT_DIR$/ExternalGPSProject.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ExternalGPS.iml" filepath="$PROJECT_DIR$/ExternalGPS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ExternalGPS/ExternalGPS-ExternalGPS.iml" filepath="$PROJECT_DIR$/ExternalGPS/ExternalGPS-ExternalGPS.iml" />
     </modules>
   </component>
 </project>

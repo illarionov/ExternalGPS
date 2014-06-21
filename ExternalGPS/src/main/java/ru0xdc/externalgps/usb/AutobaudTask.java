@@ -27,12 +27,12 @@ public class AutobaudTask extends Thread {
         public SerialLineConfiguration getSerialLineConfiguration() { return new SerialLineConfiguration();}
 
         @Override
-        public void setSerialLineConfiguration(SerialLineConfiguration conf) {};
+        public void setSerialLineConfiguration(SerialLineConfiguration conf) {}
 
         @Override
         public void onAutobaudCompleted(int baudrate) {}
         @Override
-        public void onAutobaudFailed() {};
+        public void onAutobaudFailed() {}
     };
 
     private final SharedPreferences mSharedPrefs;
